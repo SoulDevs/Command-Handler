@@ -10,20 +10,29 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Multi-Process Sharding Architecture
+### Multi-Process Sharding Architecture (Production-Grade for 3.5k+ servers, 5M+ users)
 - **Discord-Hybrid-Sharding**: Implements horizontal scaling through cluster-based sharding from startup
 - **Cluster Manager**: Entry point (`cluster.js`) spawns multiple bot processes for load distribution
-- **Auto-Sharding**: Automatically determines optimal shard count based on guild requirements
+- **Auto-Sharding**: Automatically determines optimal shard count based on guild requirements (1 shard per 2500 guilds)
 - **Process Mode**: Each cluster runs in a separate Node.js process for fault isolation
+- **Auto-Respawn**: Clusters automatically respawn on crash with exponential backoff (5s → 10s → 20s → 40s → 80s)
+- **Health Monitoring**: Continuous health checks every 30 seconds monitoring memory, ping, guilds, and users
+- **Graceful Restart**: Memory-triggered graceful restarts prevent out-of-memory crashes
+- **Restart Limits**: Max 5 restart attempts within 5 minutes before manual intervention required
+- **Shard Event Handlers**: Comprehensive error handling for shardError, shardDisconnect, shardReconnecting, and shardResume events
 
-**Rationale**: Prepares the bot for large-scale deployment (2500+ guilds require sharding). Discord-Hybrid-Sharding was chosen over native sharding for easier management and built-in process distribution.
+**Rationale**: Production-ready sharding for large-scale deployment (3500+ guilds, 5M+ users). Exponential backoff prevents crash loops. Health monitoring detects issues before they cause downtime. Memory management prevents resource exhaustion. Discord-Hybrid-Sharding was chosen over native sharding for easier management and built-in process distribution.
 
 ### Extended Client Architecture
 - **Custom Client Class**: `NpgClient` extends Discord.js Client with custom registry and handler systems
 - **Dependency Injection**: Client instance receives cluster information and injects utilities/handlers
 - **Single Responsibility**: Each handler focuses on one concern (commands, components, events)
+- **Memory Management**: Cache sweepers for messages (5min), users (1hr), threads (1hr) with configurable limits
+- **Message Cache Limiting**: Max 100 messages per channel to prevent memory bloat
+- **Performance Monitoring**: Per-cluster memory monitoring with alerts at 400MB and restarts at 512MB
+- **Garbage Collection**: Forced GC when memory exceeds 90% of cluster limit
 
-**Rationale**: Extending the base client allows centralized access to custom functionality while maintaining Discord.js compatibility. This pattern enables easier testing and reduces coupling.
+**Rationale**: Extending the base client allows centralized access to custom functionality while maintaining Discord.js compatibility. This pattern enables easier testing and reduces coupling. Memory management is critical for large-scale deployments to prevent resource exhaustion and ensure stable operation at 5M+ users.
 
 ### Command System Design
 - **Dual Command Support**: Commands work as both slash commands (`/ping`) and prefix commands (`!ping`)
@@ -100,6 +109,32 @@ The bot requires the following environment variables:
 - `PREFIX`: Command prefix (default: `!`)
 - `OWNER_IDS`: Comma-separated list of owner user IDs
 - `TEST_GUILD_ID`: Optional guild ID for testing slash commands
-- Webhook URLs for logging (optional)
+- `COMMAND_LOG_WEBHOOK`: Webhook URL for command logging (optional)
+- `ERROR_LOG_WEBHOOK`: Webhook URL for error logging (optional)
+- `SHARD_LOG_WEBHOOK`: Webhook URL for shard events (optional)
+- `ALERT_WEBHOOK`: Webhook URL for health alerts and critical issues (optional)
+- `ENABLE_EVAL`: Enable eval command (default: false, security risk)
+
+### Production-Scale Performance Configuration
+The bot includes production-ready configuration for handling 3.5k+ servers and 5M+ users:
+
+**Sharding Configuration** (`config.sharding`):
+- `totalShards`: 'auto' - Automatically calculates shards based on guild count
+- `shardsPerClusters`: 2 - Each cluster handles 2 shards
+- `respawn`: true - Auto-respawn clusters on crash
+- `maxRestarts`: 5 - Maximum restart attempts before requiring manual intervention
+- `restartDelay`: 5000ms - Base delay with exponential backoff
+
+**Performance & Memory** (`config.performance`):
+- `messageCacheLifetime`: 300s (5 minutes) - Messages cleared after 5min
+- `messageCacheMaxSize`: 100 - Max 100 messages per channel
+- `messageSweepInterval`: 300s - Sweep caches every 5 minutes
+- `maxMemoryPerCluster`: 512MB - Trigger restart if exceeded
+- `memoryCheckInterval`: 60s - Check memory every minute
+
+**Health Monitoring** (`config.monitoring`):
+- `healthCheckInterval`: 30s - Check all clusters every 30 seconds
+- `shardPingThreshold`: 300ms - Alert on high gateway ping
+- `clusterMemoryThreshold`: 400MB - Warn at 400MB usage
 
 **Note**: No database is currently configured. Future additions of Drizzle or Postgres would require schema definitions and connection management in the Client constructor.

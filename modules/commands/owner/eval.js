@@ -25,14 +25,14 @@ module.exports = {
         const client = isSlash ? argsOrClient : clientOrUndefined;
         
         if (!client.config.developer.enableEval) {
-            const embed = embedBuilder.error(
+            const response = embedBuilder.error(
                 '⚠️ **EVAL COMMAND DISABLED**\n\nThis command is disabled for security reasons. It allows arbitrary code execution which can compromise your bot and server.\n\nTo enable it (NOT RECOMMENDED for production):\n1. Set `ENABLE_EVAL=true` in your .env file\n2. Only use in controlled, trusted environments\n3. Never enable in production deployments',
                 '🔒 Security Protection Active'
             );
             if (isSlash) {
-                return interactionOrMessage.reply({ embeds: [embed], ephemeral: true });
+                return interactionOrMessage.reply({ ...response, ephemeral: true });
             } else {
-                return interactionOrMessage.reply({ embeds: [embed] });
+                return interactionOrMessage.reply(response);
             }
         }
         
@@ -44,11 +44,11 @@ module.exports = {
         }
 
         if (!code) {
-            const embed = embedBuilder.error('Please provide code to evaluate!', 'No Code Provided');
+            const response = embedBuilder.error('Please provide code to evaluate!', 'No Code Provided');
             if (isSlash) {
-                return interactionOrMessage.reply({ embeds: [embed], ephemeral: true });
+                return interactionOrMessage.reply({ ...response, ephemeral: true });
             } else {
-                return interactionOrMessage.reply({ embeds: [embed] });
+                return interactionOrMessage.reply(response);
             }
         }
 
@@ -78,38 +78,48 @@ module.exports = {
                 evaled = evaled.substring(0, 1021) + '...';
             }
 
-            const embed = embedBuilder.success(
-                `\`\`\`js\n${evaled}\`\`\``,
-                '✅ Evaluation Success'
-            );
-
-            embed.addFields({
-                name: 'Input',
-                value: `\`\`\`js\n${code.substring(0, 1000)}\`\`\``,
-                inline: false
-            });
+            const { ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, MessageFlags } = require('discord.js');
+            const container = new ContainerBuilder();
+            
+            const header = new TextDisplayBuilder()
+                .setContent('## ✅ Evaluation Success');
+            container.addTextDisplayComponents(header);
+            container.addSeparatorComponents(new SeparatorBuilder());
+            
+            const inputText = new TextDisplayBuilder()
+                .setContent(`**Input:**\n\`\`\`js\n${code.substring(0, 1000)}\`\`\``);
+            container.addTextDisplayComponents(inputText);
+            
+            const outputText = new TextDisplayBuilder()
+                .setContent(`**Output:**\n\`\`\`js\n${evaled}\`\`\``);
+            container.addTextDisplayComponents(outputText);
 
             if (isSlash) {
-                await interactionOrMessage.reply({ embeds: [embed], ephemeral: true });
+                await interactionOrMessage.reply({ components: [container], flags: MessageFlags.IsComponentsV2, ephemeral: true });
             } else {
-                await interactionOrMessage.reply({ embeds: [embed] });
+                await interactionOrMessage.reply({ components: [container], flags: MessageFlags.IsComponentsV2 });
             }
         } catch (error) {
-            const embed = embedBuilder.error(
-                `\`\`\`js\n${error.message?.substring(0, 1000) || 'Unknown error'}\`\`\``,
-                '❌ Evaluation Error'
-            );
-
-            embed.addFields({
-                name: 'Input',
-                value: `\`\`\`js\n${code.substring(0, 1000)}\`\`\``,
-                inline: false
-            });
+            const { ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, MessageFlags } = require('discord.js');
+            const container = new ContainerBuilder();
+            
+            const header = new TextDisplayBuilder()
+                .setContent('## ❌ Evaluation Error');
+            container.addTextDisplayComponents(header);
+            container.addSeparatorComponents(new SeparatorBuilder());
+            
+            const inputText = new TextDisplayBuilder()
+                .setContent(`**Input:**\n\`\`\`js\n${code.substring(0, 1000)}\`\`\``);
+            container.addTextDisplayComponents(inputText);
+            
+            const errorText = new TextDisplayBuilder()
+                .setContent(`**Error:**\n\`\`\`js\n${error.message?.substring(0, 1000) || 'Unknown error'}\`\`\``);
+            container.addTextDisplayComponents(errorText);
 
             if (isSlash) {
-                await interactionOrMessage.reply({ embeds: [embed], ephemeral: true });
+                await interactionOrMessage.reply({ components: [container], flags: MessageFlags.IsComponentsV2, ephemeral: true });
             } else {
-                await interactionOrMessage.reply({ embeds: [embed] });
+                await interactionOrMessage.reply({ components: [container], flags: MessageFlags.IsComponentsV2 });
             }
         }
     }

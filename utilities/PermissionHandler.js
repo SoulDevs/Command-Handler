@@ -41,29 +41,29 @@ class PermissionHandler {
         const guild = isInteraction ? interactionOrMessage.guild : interactionOrMessage.guild;
 
         if (permissionConfig.ownerOnly && !this.isOwner(user.id)) {
-            const embed = embedBuilder.error(
+            const response = embedBuilder.error(
                 'This command can only be used by the bot owner!',
                 '❌ Owner Only'
             );
             
             if (isInteraction) {
-                await interactionOrMessage.reply({ embeds: [embed], ephemeral: true });
+                await interactionOrMessage.reply({ ...response, ephemeral: true });
             } else {
-                await interactionOrMessage.reply({ embeds: [embed] });
+                await interactionOrMessage.reply(response);
             }
             return false;
         }
 
         if (permissionConfig.guildOnly && !guild) {
-            const embed = embedBuilder.error(
+            const response = embedBuilder.error(
                 'This command can only be used in servers, not in DMs!',
                 '❌ Server Only'
             );
             
             if (isInteraction) {
-                await interactionOrMessage.reply({ embeds: [embed], ephemeral: true });
+                await interactionOrMessage.reply({ ...response, ephemeral: true });
             } else {
-                await interactionOrMessage.reply({ embeds: [embed] });
+                await interactionOrMessage.reply(response);
             }
             return false;
         }
@@ -73,15 +73,15 @@ class PermissionHandler {
                 if (!this.hasPermission(member, perm)) {
                     const permName = typeof perm === 'string' ? perm : Object.keys(PermissionFlagsBits).find(key => PermissionFlagsBits[key] === perm);
                     
-                    const embed = embedBuilder.error(
+                    const response = embedBuilder.error(
                         `You need the **${permName}** permission to use this command!`,
                         '❌ Missing Permissions'
                     );
                     
                     if (isInteraction) {
-                        await interactionOrMessage.reply({ embeds: [embed], ephemeral: true });
+                        await interactionOrMessage.reply({ ...response, ephemeral: true });
                     } else {
-                        await interactionOrMessage.reply({ embeds: [embed] });
+                        await interactionOrMessage.reply(response);
                     }
                     return false;
                 }
@@ -90,15 +90,15 @@ class PermissionHandler {
 
         if (permissionConfig.requiredRoles && guild && member) {
             if (!this.hasAnyRole(member, permissionConfig.requiredRoles)) {
-                const embed = embedBuilder.error(
+                const response = embedBuilder.error(
                     'You don\'t have the required role to use this command!',
                     '❌ Missing Role'
                 );
                 
                 if (isInteraction) {
-                    await interactionOrMessage.reply({ embeds: [embed], ephemeral: true });
+                    await interactionOrMessage.reply({ ...response, ephemeral: true });
                 } else {
-                    await interactionOrMessage.reply({ embeds: [embed] });
+                    await interactionOrMessage.reply(response);
                 }
                 return false;
             }
@@ -111,15 +111,15 @@ class PermissionHandler {
                 if (!this.hasPermission(botMember, perm)) {
                     const permName = typeof perm === 'string' ? perm : Object.keys(PermissionFlagsBits).find(key => PermissionFlagsBits[key] === perm);
                     
-                    const embed = embedBuilder.error(
+                    const response = embedBuilder.error(
                         `I need the **${permName}** permission to execute this command!`,
                         '❌ Bot Missing Permissions'
                     );
                     
                     if (isInteraction) {
-                        await interactionOrMessage.reply({ embeds: [embed], ephemeral: true });
+                        await interactionOrMessage.reply({ ...response, ephemeral: true });
                     } else {
-                        await interactionOrMessage.reply({ embeds: [embed] });
+                        await interactionOrMessage.reply(response);
                     }
                     return false;
                 }

@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Collection, Options } = require('discord.js');
 const CommandHandler = require('../handlers/CommandHandler');
 const ComponentHandler = require('../handlers/ComponentHandler');
 const EventHandler = require('../handlers/EventHandler');
@@ -6,6 +6,7 @@ const CommandRegistry = require('../registry/CommandRegistry');
 const ComponentRegistry = require('../registry/ComponentRegistry');
 const WebhookLogger = require('../utilities/WebhookLogger');
 const PermissionHandler = require('../utilities/PermissionHandler');
+const ErrorHandler = require('../utilities/ErrorHandler');
 const logger = require('../utilities/Logger');
 const config = require('../config');
 
@@ -26,7 +27,30 @@ class NpgClient extends Client {
                 Partials.GuildMember
             ],
             shards: cluster.ids,
-            shardCount: cluster.count
+            shardCount: cluster.count,
+            // Memory-efficient cache configuration for large scale (3.5k+ servers, 5M+ users)
+            makeCache: Options.cacheWithLimits({
+                ...Options.DefaultMakeCacheSettings,
+                MessageManager: config.performance?.messageCacheMaxSize || 100,
+                PresenceManager: 0,
+                ReactionManager: 0,
+                ReactionUserManager: 0
+            }),
+            // Cache sweepers for automatic cleanup
+            sweepers: {
+                messages: {
+                    interval: config.performance?.messageSweepInterval || 300,
+                    lifetime: config.performance?.messageCacheLifetime || 300
+                },
+                users: {
+                    interval: 3600, // 1 hour
+                    filter: () => user => user.bot && user.id !== this.user.id
+                },
+                threads: {
+                    interval: 3600, // 1 hour
+                    lifetime: config.performance?.threadCacheLifetime || 3600
+                }
+            }
         });
 
         this.cluster = cluster;
@@ -35,6 +59,7 @@ class NpgClient extends Client {
         
         this.webhookLogger = new WebhookLogger(this);
         this.permissionHandler = new PermissionHandler(this);
+        this.errorHandler = new ErrorHandler(this);
         
         this.registry = {
             commands: new CommandRegistry(),
@@ -47,7 +72,73 @@ class NpgClient extends Client {
             events: new EventHandler(this)
         };
 
+        this.setupGlobalErrorHandlers();
+        this.setupMemoryMonitoring();
         this.setupEventListeners();
+    }
+    
+    setupGlobalErrorHandlers() {
+        process.on('uncaughtException', (error) => {
+            this.errorHandler.handleProcessError(error, 'uncaughtException');
+        });
+
+        process.on('unhandledRejection', (error) => {
+            this.errorHandler.handleProcessError(error, 'unhandledRejection');
+        });
+
+        this.on('error', (error) => {
+            this.errorHandler.handleEventError(error, 'client');
+        });
+
+        this.on('warn', (warning) => {
+            this.logger.warn(warning, this.cluster?.id);
+        });
+
+        this.on('shardError', (error, shardId) => {
+            this.logger.error(`Shard ${shardId} error:`, error, this.cluster?.id);
+        });
+
+        this.on('shardDisconnect', (event, shardId) => {
+            this.logger.warn(`Shard ${shardId} disconnected`, this.cluster?.id);
+        });
+
+        this.on('shardReconnecting', (shardId) => {
+            this.logger.info(`Shard ${shardId} reconnecting...`, this.cluster?.id);
+        });
+
+        this.on('shardResume', (shardId, replayedEvents) => {
+            this.logger.info(`Shard ${shardId} resumed (${replayedEvents} events replayed)`, this.cluster?.id);
+        });
+    }
+    
+    setupMemoryMonitoring() {
+        if (!this.config.monitoring?.enabled) return;
+        
+        // Monitor memory usage every minute
+        setInterval(() => {
+            const memoryUsage = process.memoryUsage();
+            const memoryMB = Math.round(memoryUsage.heapUsed / 1024 / 1024);
+            
+            // Log high memory usage (use monitoring config, not performance config)
+            if (memoryMB > this.config.monitoring.clusterMemoryThreshold) {
+                this.logger.warn(`High memory usage: ${memoryMB}MB`, this.cluster?.id);
+                
+                // Send warning to cluster manager
+                if (process.send) {
+                    process.send({
+                        type: 'memoryWarning',
+                        clusterId: this.cluster?.id,
+                        memoryMB
+                    });
+                }
+            }
+            
+            // Force garbage collection if memory exceeds 90% of limit
+            if (memoryMB > this.config.performance.maxMemoryPerCluster * 0.9 && global.gc) {
+                this.logger.warn(`Forcing garbage collection at ${memoryMB}MB`, this.cluster?.id);
+                global.gc();
+            }
+        }, this.config.performance?.memoryCheckInterval || 60000);
     }
 
     setupEventListeners() {
@@ -64,6 +155,7 @@ class NpgClient extends Client {
                 }
             } catch (error) {
                 logger.error('Error handling interaction:', error, this.cluster.id);
+                await this.errorHandler.handleInteractionError(error, interaction);
             }
         });
 
@@ -72,6 +164,7 @@ class NpgClient extends Client {
                 await this.handlers.commands.handlePrefixCommand(message);
             } catch (error) {
                 logger.error('Error handling message:', error, this.cluster.id);
+                // Don't send error messages for every message - only command errors are handled in the handler
             }
         });
 
