@@ -9,6 +9,7 @@ A professional Discord bot built with **Discord.js v14**, featuring **Component 
 - 🎯 **Component v2 Handler** - Buttons, Select Menus, Modals
 - ⚡ **Slash Commands** - Full slash command support
 - 📝 **Prefix Commands** - Traditional prefix commands with aliases
+- 🏷️ **@Mention Commands** - Use commands by mentioning the bot
 - 🎨 **Colorful ASCII Logging** - Beautiful console output with cluster info
 - 📁 **Unique File Structure** - Organized and maintainable codebase
 
@@ -76,16 +77,28 @@ npm start
 
 ## 📝 Commands
 
-### Slash Commands
+The bot supports **4 different ways** to execute commands:
+
+### 1. Slash Commands
 - `/ping` - Check bot latency and shard info
 - `/help` - View all commands with interactive menu
 - `/button` - Test button components
 
-### Prefix Commands
-All slash commands also work with prefix (default `!`):
+### 2. Prefix Commands
+Use the configured prefix (default `!`):
 - `!ping`
 - `!help`
 - `!button`
+
+### 3. @Mention Commands
+Mention the bot followed by the command:
+- `@Npg ping`
+- `@Npg help`
+- `@Npg button`
+
+### 4. Just @Mention
+Simply mention the bot to see the prefix and usage info:
+- `@Npg` - Shows helpful information about the bot
 
 ## 🎨 Component v2 Handler
 

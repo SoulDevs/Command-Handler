@@ -86,20 +86,56 @@ class CommandHandler {
     }
 
     async handlePrefixCommand(message) {
-        const prefix = this.client.config.bot.prefix;
-        
-        if (!message.content.startsWith(prefix) || message.author.bot) return;
+        if (message.author.bot) return;
 
-        const args = message.content.slice(prefix.length).trim().split(/ +/);
-        const commandName = args.shift().toLowerCase();
+        const prefix = this.client.config.bot.prefix;
+        const mentionPrefix = `<@${this.client.user.id}>`;
+        const mentionPrefixNick = `<@!${this.client.user.id}>`;
+        
+        let args;
+        let commandName;
+        let usedMention = false;
+
+        if (message.content.startsWith(prefix)) {
+            args = message.content.slice(prefix.length).trim().split(/ +/);
+            commandName = args.shift().toLowerCase();
+        }
+        else if (message.content.startsWith(mentionPrefix)) {
+            usedMention = true;
+            args = message.content.slice(mentionPrefix.length).trim().split(/ +/);
+            commandName = args.shift()?.toLowerCase();
+        }
+        else if (message.content.startsWith(mentionPrefixNick)) {
+            usedMention = true;
+            args = message.content.slice(mentionPrefixNick.length).trim().split(/ +/);
+            commandName = args.shift()?.toLowerCase();
+        }
+        else if (message.mentions.has(this.client.user.id)) {
+            const content = message.content.replace(/<@!?\d+>/g, '').trim();
+            if (!content) {
+                const embedBuilder = require('../utilities/EmbedBuilder');
+                const embed = embedBuilder.info(
+                    `Hello ${message.author}! 👋\n\nMy prefix is \`${prefix}\`\nYou can also mention me to use commands!\n\nExamples:\n\`${prefix}help\` or \`@${this.client.user.username} help\``,
+                    'Npg Bot'
+                );
+                return message.reply({ embeds: [embed] });
+            }
+            return;
+        }
+        else {
+            return;
+        }
+
+        if (!commandName) return;
 
         const command = this.client.registry.commands.getPrefix(commandName);
         
         if (!command) return;
 
         try {
+            const logPrefix = usedMention ? `@${commandName}` : `${prefix}${commandName}`;
             logger.command(
-                commandName, 
+                logPrefix, 
                 message.author.tag, 
                 message.guild?.name || 'DM',
                 this.client.cluster?.id

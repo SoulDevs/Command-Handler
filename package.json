@@ -8,12 +8,18 @@
     "deploy": "node deployCommands.js",
     "test": "node cluster.js"
   },
-  "keywords": ["discord", "bot", "discord.js", "sharding", "components"],
+  "keywords": [
+    "discord",
+    "bot",
+    "discord.js",
+    "sharding",
+    "components"
+  ],
   "author": "Npg",
   "license": "MIT",
   "dependencies": {
     "ascii-art": "^2.8.5",
-    "chalk": "^5.6.2",
+    "chalk": "^4.1.2",
     "discord-hybrid-sharding": "^3.0.1",
     "discord.js": "^14.25.1",
     "dotenv": "^17.2.3"
