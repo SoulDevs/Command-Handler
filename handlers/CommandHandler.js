@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const logger = require('../utilities/Logger');
+const embedBuilder = require('../utilities/EmbedBuilder');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 class CommandHandler {
     constructor(client) {
@@ -61,6 +63,13 @@ class CommandHandler {
             });
         }
 
+        if (command.permissions) {
+            const hasPermission = await this.client.permissionHandler.checkPermissions(interaction, command.permissions);
+            if (!hasPermission) {
+                return;
+            }
+        }
+
         try {
             logger.command(
                 interaction.commandName, 
@@ -68,9 +77,27 @@ class CommandHandler {
                 interaction.guild?.name || 'DM',
                 this.client.cluster?.id
             );
+            
             await command.execute(interaction, this.client);
+            
+            await this.client.webhookLogger.logCommand(
+                interaction.commandName,
+                interaction.user,
+                interaction.guild,
+                'slash',
+                true
+            );
         } catch (error) {
             logger.error(`Error executing ${interaction.commandName}:`, error);
+            
+            await this.client.webhookLogger.logCommand(
+                interaction.commandName,
+                interaction.user,
+                interaction.guild,
+                'slash',
+                false,
+                error
+            );
             
             const errorMessage = { 
                 content: 'There was an error executing this command!', 
@@ -113,12 +140,49 @@ class CommandHandler {
         else if (message.mentions.has(this.client.user.id)) {
             const content = message.content.replace(/<@!?\d+>/g, '').trim();
             if (!content) {
-                const embedBuilder = require('../utilities/EmbedBuilder');
-                const embed = embedBuilder.info(
-                    `Hello ${message.author}! 👋\n\nMy prefix is \`${prefix}\`\nYou can also mention me to use commands!\n\nExamples:\n\`${prefix}help\` or \`@${this.client.user.username} help\``,
-                    'Npg Bot'
-                );
-                return message.reply({ embeds: [embed] });
+                const embed = embedBuilder.create({
+                    title: `👋 Hey there, ${message.author.username}!`,
+                    description: `**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\n\nMy prefix is: \`${prefix}\`\n\nYou can use commands in multiple ways:`,
+                    fields: [
+                        {
+                            name: '📝 Command Methods',
+                            value: `> **Prefix:** \`${prefix}help\`\n> **Mention:** \`@${this.client.user.username} help\`\n> **Slash:** \`/help\``,
+                            inline: false
+                        },
+                        {
+                            name: '**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\n🚀 Quick Start',
+                            value: `Type \`${prefix}help\` or click the button below to see all commands!`,
+                            inline: false
+                        }
+                    ],
+                    thumbnail: this.client.user.displayAvatarURL({ size: 1024 }),
+                    color: 0x5865F2,
+                    footer: {
+                        text: `${this.client.config.bot.name} • Cluster ${this.client.cluster?.id || 0}`,
+                        iconURL: this.client.user.displayAvatarURL()
+                    }
+                });
+
+                const row = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('mention_help')
+                            .setLabel('View Commands')
+                            .setStyle(ButtonStyle.Primary)
+                            .setEmoji('📚'),
+                        new ButtonBuilder()
+                            .setLabel('Invite Bot')
+                            .setStyle(ButtonStyle.Link)
+                            .setURL(`https://discord.com/api/oauth2/authorize?client_id=${this.client.user.id}&permissions=8&scope=bot%20applications.commands`)
+                            .setEmoji('➕'),
+                        new ButtonBuilder()
+                            .setCustomId('mention_ping')
+                            .setLabel('Ping')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setEmoji('🏓')
+                    );
+
+                return message.reply({ embeds: [embed], components: [row] });
             }
             return;
         }
@@ -132,17 +196,45 @@ class CommandHandler {
         
         if (!command) return;
 
+        if (command.permissions) {
+            const hasPermission = await this.client.permissionHandler.checkPermissions(message, command.permissions);
+            if (!hasPermission) {
+                return;
+            }
+        }
+
         try {
             const logPrefix = usedMention ? `@${commandName}` : `${prefix}${commandName}`;
+            const commandType = usedMention ? 'mention' : 'prefix';
+            
             logger.command(
                 logPrefix, 
                 message.author.tag, 
                 message.guild?.name || 'DM',
                 this.client.cluster?.id
             );
+            
             await command.execute(message, args, this.client);
+            
+            await this.client.webhookLogger.logCommand(
+                commandName,
+                message.author,
+                message.guild,
+                commandType,
+                true
+            );
         } catch (error) {
             logger.error(`Error executing ${commandName}:`, error);
+            
+            await this.client.webhookLogger.logCommand(
+                commandName,
+                message.author,
+                message.guild,
+                usedMention ? 'mention' : 'prefix',
+                false,
+                error
+            );
+            
             await message.reply('There was an error executing this command!');
         }
     }

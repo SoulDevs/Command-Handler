@@ -4,6 +4,8 @@ const ComponentHandler = require('../handlers/ComponentHandler');
 const EventHandler = require('../handlers/EventHandler');
 const CommandRegistry = require('../registry/CommandRegistry');
 const ComponentRegistry = require('../registry/ComponentRegistry');
+const WebhookLogger = require('../utilities/WebhookLogger');
+const PermissionHandler = require('../utilities/PermissionHandler');
 const logger = require('../utilities/Logger');
 const config = require('../config');
 
@@ -30,6 +32,9 @@ class NpgClient extends Client {
         this.cluster = cluster;
         this.config = config;
         this.logger = logger;
+        
+        this.webhookLogger = new WebhookLogger(this);
+        this.permissionHandler = new PermissionHandler(this);
         
         this.registry = {
             commands: new CommandRegistry(),
@@ -73,6 +78,13 @@ class NpgClient extends Client {
         this.once('ready', () => {
             logger.shardReady(this.cluster.id, this.cluster.count);
             this.setPresence();
+            
+            if (this.config.webhooks.commandLog) {
+                this.webhookLogger.setWebhookURL(this.config.webhooks.commandLog);
+            }
+            if (this.config.webhooks.shardLog) {
+                this.webhookLogger.logShardReady(this.cluster.id, this.cluster.count, this.guilds.cache.size);
+            }
         });
     }
 

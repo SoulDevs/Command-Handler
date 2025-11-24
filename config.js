@@ -38,5 +38,21 @@ module.exports = {
         success: 0x57F287,
         error: 0xED4245,
         warning: 0xFEE75C
+    },
+
+    webhooks: {
+        commandLog: process.env.COMMAND_LOG_WEBHOOK || null,
+        errorLog: process.env.ERROR_LOG_WEBHOOK || null,
+        shardLog: process.env.SHARD_LOG_WEBHOOK || null
+    },
+    
+    permissions: {
+        checkOwner: true,
+        checkPermissions: true,
+        sendErrorMessages: true
+    },
+    
+    developer: {
+        enableEval: process.env.ENABLE_EVAL === 'true' || false
     }
 };
