@@ -1,14 +1,16 @@
 {
-  "name": "workspace",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "npg-discord-bot",
+  "version": "2.0.0",
+  "description": "A professional Discord bot with Discord.js v14, Component v2 Handler, and Discord-Hybrid-Sharding",
+  "main": "cluster.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node cluster.js",
+    "deploy": "node deployCommands.js",
+    "test": "node cluster.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": ["discord", "bot", "discord.js", "sharding", "components"],
+  "author": "Npg",
+  "license": "MIT",
   "dependencies": {
     "ascii-art": "^2.8.5",
     "chalk": "^5.6.2",
