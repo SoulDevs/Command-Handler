@@ -85,36 +85,55 @@ module.exports = {
         } else if (value === 'owner') {
             const isOwner = client.permissionHandler.isOwner(interaction.user.id);
             
-            embed = embedBuilder.create({
-                title: `👑 ${client.config.bot.name} - Owner Commands`,
-                description: isOwner 
-                    ? '**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\nExclusive commands for bot owners:'
-                    : '**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\n⚠️ You are not a bot owner!',
-                fields: [
-                    {
-                        name: '💻 /eval',
-                        value: isOwner 
-                            ? '```Execute JavaScript code for debugging```\n> ⚠️ **DISABLED by default** for security\n> Set `ENABLE_EVAL=true` to enable (NOT recommended for production)'
-                            : '```Execute JavaScript code for debugging```\n> 🔒 Owner-only command',
-                        inline: false
+            if (isOwner) {
+                // Show full owner commands for authorized users
+                embed = embedBuilder.create({
+                    title: `👑 ${client.config.bot.name} - Owner Commands`,
+                    description: '**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\nExclusive commands for bot owners:',
+                    fields: [
+                        {
+                            name: '💻 /eval',
+                            value: '```Execute JavaScript code for debugging```\n> ⚠️ **DISABLED by default** for security\n> Set `ENABLE_EVAL=true` to enable (NOT recommended for production)',
+                            inline: false
+                        },
+                        {
+                            name: '**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\n🛡️ Security',
+                            value: '> Eval is **disabled by default** to prevent remote code execution\n> Only enable in **controlled, trusted environments**\n> Never enable in **production deployments**',
+                            inline: false
+                        }
+                    ],
+                    thumbnail: client.user.displayAvatarURL({ size: 1024 }),
+                    footer: { 
+                        text: `⚠️ Use with extreme caution • ${client.config.bot.version}`,
+                        iconURL: client.user.displayAvatarURL()
                     },
-                    {
-                        name: '**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\n🛡️ Security',
-                        value: isOwner
-                            ? '> Eval is **disabled by default** to prevent remote code execution\n> Only enable in **controlled, trusted environments**\n> Never enable in **production deployments**'
-                            : '> These commands are restricted to bot owners only\n> Configure owner IDs in `.env` file',
-                        inline: false
-                    }
-                ],
-                thumbnail: client.user.displayAvatarURL({ size: 1024 }),
-                footer: { 
-                    text: isOwner 
-                        ? `⚠️ Use with extreme caution • ${client.config.bot.version}`
-                        : `Contact ${client.config.bot.owner} for access`,
-                    iconURL: client.user.displayAvatarURL()
-                },
-                color: isOwner ? 0xFEE75C : 0xED4245
-            });
+                    color: 0xFEE75C
+                });
+            } else {
+                // Show access denied for non-owners - no command details leaked
+                embed = embedBuilder.create({
+                    title: `🔒 ${client.config.bot.name} - Access Denied`,
+                    description: '**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\n⚠️ **You do not have permission to view this category**',
+                    fields: [
+                        {
+                            name: '🚫 Restricted Access',
+                            value: '> This category contains owner-only commands\n> You must be a bot owner to access this section\n> Owner permissions are configured in the bot configuration',
+                            inline: false
+                        },
+                        {
+                            name: '**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\n📞 Need Access?',
+                            value: `> Contact the bot owner: **${client.config.bot.owner}**\n> Only authorized personnel can use these commands\n> For security reasons, command details are hidden`,
+                            inline: false
+                        }
+                    ],
+                    thumbnail: client.user.displayAvatarURL({ size: 1024 }),
+                    footer: { 
+                        text: `Unauthorized Access Attempt`,
+                        iconURL: client.user.displayAvatarURL()
+                    },
+                    color: 0xED4245
+                });
+            }
         } else if (value === 'features') {
             embed = embedBuilder.create({
                 title: `⚡ ${client.config.bot.name} - Features`,

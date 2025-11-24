@@ -37,28 +37,29 @@ class Logger {
                     });
                 }
                 
-                // Beautiful Discord-themed info box
-                const boxWidth = 68;
-                const createRow = (icon, label, separator, value, valueColor = '#FFFFFF') => {
-                    const content = `  ${icon} ${label.padEnd(14)} ${separator} `;
-                    const valueStr = chalk.hex(valueColor).bold(value);
-                    const valueLen = value.length;
-                    const padding = Math.max(0, boxWidth - content.length - valueLen - 2);
-                    return chalk.hex('#5865F2').bold('║') + 
-                           chalk.hex('#99AAB5')(content) + 
-                           valueStr + 
-                           ' '.repeat(padding) +
-                           chalk.hex('#5865F2').bold('║');
+                // Beautiful Discord-themed info box - 70 character width
+                const border = chalk.hex('#5865F2').bold('║');
+                const topBorder = chalk.hex('#5865F2').bold('╔' + '═'.repeat(70) + '╗');
+                const bottomBorder = chalk.hex('#5865F2').bold('╚' + '═'.repeat(70) + '╝');
+                
+                const createRow = (icon, label, value, valueColor) => {
+                    const labelPart = `${icon} ${label}`.padEnd(20);
+                    const separator = chalk.hex('#5865F2')('│');
+                    const valuePart = chalk.hex(valueColor).bold(value);
+                    const textLength = labelPart.length + 3 + value.length; // 3 for ' │ '
+                    const padding = ' '.repeat(Math.max(0, 70 - textLength));
+                    
+                    return border + chalk.hex('#99AAB5')(`  ${labelPart} ${separator} `) + valuePart + padding + border;
                 };
                 
-                console.log(chalk.hex('#5865F2').bold('╔' + '═'.repeat(boxWidth) + '╗'));
-                console.log(createRow('🤖', 'Bot Name', chalk.hex('#5865F2')('│'), botName, '#FFFFFF'));
-                console.log(createRow('👤', 'Owner', chalk.hex('#5865F2')('│'), ownerName, '#FFFFFF'));
-                console.log(createRow('📦', 'Version', chalk.hex('#5865F2')('│'), version, '#FEE75C'));
-                console.log(createRow('⚡', 'Framework', chalk.hex('#5865F2')('│'), 'Discord.js v14', '#57F287'));
-                console.log(createRow('🔀', 'Sharding', chalk.hex('#5865F2')('│'), 'Hybrid-Sharding', '#FEE75C'));
-                console.log(createRow('🌐', 'Total Shards', chalk.hex('#5865F2')('│'), totalShards.toString(), '#99AAB5'));
-                console.log(chalk.hex('#5865F2').bold('╚' + '═'.repeat(boxWidth) + '╝'));
+                console.log(topBorder);
+                console.log(createRow('🤖', 'Bot Name', botName, '#FFFFFF'));
+                console.log(createRow('👤', 'Owner', ownerName, '#FFFFFF'));
+                console.log(createRow('📦', 'Version', version, '#FEE75C'));
+                console.log(createRow('⚡', 'Framework', 'Discord.js v14', '#57F287'));
+                console.log(createRow('🔀', 'Sharding', 'Hybrid-Sharding', '#FEE75C'));
+                console.log(createRow('🌐', 'Total Shards', totalShards.toString(), '#99AAB5'));
+                console.log(bottomBorder);
                 console.log('\n');
                 
                 resolve();
