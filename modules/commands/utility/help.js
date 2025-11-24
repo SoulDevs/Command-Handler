@@ -13,21 +13,31 @@ module.exports = {
     async execute(interactionOrMessage, argsOrClient, clientOrUndefined) {
         const isSlash = interactionOrMessage.isChatInputCommand?.();
         const client = isSlash ? argsOrClient : clientOrUndefined;
+        const userId = isSlash ? interactionOrMessage.user.id : interactionOrMessage.author.id;
+        const isOwner = client.permissionHandler.isOwner(userId);
+        
+        const fields = [
+            {
+                name: '🛠️ Utility Commands',
+                value: '```\n/ping      - Check bot latency\n/help      - Show this menu\n/button    - Test button components\n/shard     - View shard information\n```',
+                inline: false
+            }
+        ];
+        
+        // Only show owner commands section to actual owners
+        if (isOwner) {
+            fields.push({
+                name: '**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\n👑 Owner Commands',
+                value: '```\n/eval      - Execute code (DISABLED by default)\n```\n> *⚠️ Use with extreme caution*',
+                inline: false
+            });
+        }
         
         const embed = embedBuilder.create({
             title: `📚 ${client.config.bot.name} - Help Center`,
             description: `Welcome to **${client.config.bot.name}**! Your powerful Discord bot with full component support.\n\n**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**`,
             fields: [
-                {
-                    name: '🛠️ Utility Commands',
-                    value: '```\n/ping      - Check bot latency\n/help      - Show this menu\n/button    - Test button components\n/shard     - View shard information\n```',
-                    inline: false
-                },
-                {
-                    name: '**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\n👑 Owner Commands',
-                    value: '```\n/eval      - Execute code (DISABLED by default)\n```\n> *Only bot owners can use these commands*',
-                    inline: false
-                },
+                ...fields,
                 {
                     name: '**━━━━━━━━━━━━━━━━━━━━━━━━━━━━**\n📝 Multiple Ways to Use Commands',
                     value: `> **Slash Commands:** \`/ping\`\n> **Prefix Commands:** \`${client.config.bot.prefix}ping\`\n> **@Mention Commands:** \`@${client.user.username} ping\`\n> **Just Mention:** \`@${client.user.username}\` (for help)`,
@@ -52,6 +62,40 @@ module.exports = {
             color: 0x5865F2
         });
 
+        // Build dropdown options - only include owner category for owners
+        const dropdownOptions = [
+            {
+                label: 'Utility Commands',
+                description: 'View all utility commands',
+                value: 'utility',
+                emoji: '🛠️'
+            }
+        ];
+        
+        if (isOwner) {
+            dropdownOptions.push({
+                label: 'Owner Commands',
+                description: 'Bot owner exclusive commands',
+                value: 'owner',
+                emoji: '👑'
+            });
+        }
+        
+        dropdownOptions.push(
+            {
+                label: 'Bot Information',
+                description: 'Learn more about the bot',
+                value: 'about',
+                emoji: 'ℹ️'
+            },
+            {
+                label: 'Features',
+                description: 'View bot features and capabilities',
+                value: 'features',
+                emoji: '⚡'
+            }
+        );
+        
         const selectRow = new ActionRowBuilder()
             .addComponents(
                 new StringSelectMenuBuilder()
@@ -59,32 +103,7 @@ module.exports = {
                     .setPlaceholder('📂 Select a category to explore')
                     .setMinValues(1)
                     .setMaxValues(1)
-                    .addOptions([
-                        {
-                            label: 'Utility Commands',
-                            description: 'View all utility commands',
-                            value: 'utility',
-                            emoji: '🛠️'
-                        },
-                        {
-                            label: 'Owner Commands',
-                            description: 'Bot owner exclusive commands',
-                            value: 'owner',
-                            emoji: '👑'
-                        },
-                        {
-                            label: 'Bot Information',
-                            description: 'Learn more about the bot',
-                            value: 'about',
-                            emoji: 'ℹ️'
-                        },
-                        {
-                            label: 'Features',
-                            description: 'View bot features and capabilities',
-                            value: 'features',
-                            emoji: '⚡'
-                        }
-                    ])
+                    .addOptions(dropdownOptions)
             );
 
         const buttonRow = new ActionRowBuilder()

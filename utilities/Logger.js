@@ -19,30 +19,48 @@ class Logger {
         return new Promise((resolve) => {
             const botName = config?.bot?.name || 'Npg';
             const ownerName = config?.bot?.owner || 'Npg';
-            const version = config?.bot?.version || '2.0.0';
+            const version = config?.bot?.version || '1.0.0';
+            const totalShards = config?.sharding?.totalShards || 'auto';
             
+            // Use Doom font which is guaranteed to be available
             ascii.font(botName, 'Doom', (err, rendered) => {
-                if (err) {
-                    console.log(chalk.bold.cyan('='.repeat(60)));
-                    console.log(chalk.bold.cyan(`${botName.toUpperCase()} DISCORD BOT`));
-                    console.log(chalk.bold.cyan('='.repeat(60)));
-                    console.log(chalk.cyan(`  Bot Name:    ${chalk.white.bold(botName)}`));
-                    console.log(chalk.cyan(`  Owner:       ${chalk.white.bold(ownerName)}`));
-                    console.log(chalk.cyan(`  Version:     ${chalk.white.bold(version)}`));
-                    console.log(chalk.cyan(`  Framework:   ${chalk.white.bold('Discord.js v14')}`));
-                    console.log(chalk.cyan(`  Sharding:    ${chalk.white.bold('Discord-Hybrid-Sharding')}`));
-                    console.log(chalk.bold.cyan('='.repeat(60)));
-                    return resolve();
+                console.log('\n');
+                
+                if (!err && rendered) {
+                    // Display ASCII art with beautiful gradient colors
+                    const lines = rendered.split('\n').filter(line => line.trim());
+                    lines.forEach((line, index) => {
+                        // Gradient from Discord Blurple to lighter shades
+                        const colors = ['#5865F2', '#6875F5', '#7885F7', '#8895FA', '#99AAB5'];
+                        const colorIndex = Math.floor((index / lines.length) * colors.length);
+                        console.log(chalk.hex(colors[colorIndex]).bold(line));
+                    });
                 }
                 
-                console.log(chalk.bold.cyan(rendered));
-                console.log(chalk.bold.cyan('='.repeat(60)));
-                console.log(chalk.cyan(`  Bot Name:    ${chalk.white.bold(botName)}`));
-                console.log(chalk.cyan(`  Owner:       ${chalk.white.bold(ownerName)}`));
-                console.log(chalk.cyan(`  Version:     ${chalk.white.bold(version)}`));
-                console.log(chalk.cyan(`  Framework:   ${chalk.white.bold('Discord.js v14')}`));
-                console.log(chalk.cyan(`  Sharding:    ${chalk.white.bold('Discord-Hybrid-Sharding')}`));
-                console.log(chalk.bold.cyan('='.repeat(60)));
+                // Beautiful Discord-themed info box
+                const boxWidth = 68;
+                const createRow = (icon, label, separator, value, valueColor = '#FFFFFF') => {
+                    const content = `  ${icon} ${label.padEnd(14)} ${separator} `;
+                    const valueStr = chalk.hex(valueColor).bold(value);
+                    const valueLen = value.length;
+                    const padding = Math.max(0, boxWidth - content.length - valueLen - 2);
+                    return chalk.hex('#5865F2').bold('║') + 
+                           chalk.hex('#99AAB5')(content) + 
+                           valueStr + 
+                           ' '.repeat(padding) +
+                           chalk.hex('#5865F2').bold('║');
+                };
+                
+                console.log(chalk.hex('#5865F2').bold('╔' + '═'.repeat(boxWidth) + '╗'));
+                console.log(createRow('🤖', 'Bot Name', chalk.hex('#5865F2')('│'), botName, '#FFFFFF'));
+                console.log(createRow('👤', 'Owner', chalk.hex('#5865F2')('│'), ownerName, '#FFFFFF'));
+                console.log(createRow('📦', 'Version', chalk.hex('#5865F2')('│'), version, '#FEE75C'));
+                console.log(createRow('⚡', 'Framework', chalk.hex('#5865F2')('│'), 'Discord.js v14', '#57F287'));
+                console.log(createRow('🔀', 'Sharding', chalk.hex('#5865F2')('│'), 'Hybrid-Sharding', '#FEE75C'));
+                console.log(createRow('🌐', 'Total Shards', chalk.hex('#5865F2')('│'), totalShards.toString(), '#99AAB5'));
+                console.log(chalk.hex('#5865F2').bold('╚' + '═'.repeat(boxWidth) + '╝'));
+                console.log('\n');
+                
                 resolve();
             });
         });
